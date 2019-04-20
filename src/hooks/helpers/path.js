@@ -15,13 +15,13 @@ function parseNestedPath(path, params) {
 
 function parsePath(hook, config = {removePathFromCacheKey: false, parseNestedRoutes: false}) {
   const q = hook.params.query || {};
-  const paginate = hook.params.paginate === false ? 'off' : 'on';
+  const paginate = hook.params.paginate === false ? 'off' : 'on'; // if `.paginate` is underfined it means pagination hook is enabled, that's why we are using strict check with false
   const remove = config.removePathFromCacheKey;
   const parseNestedRoutes = config.parseNestedRoutes;
   let path = remove && hook.id ? `paginate:${paginate}:` : `paginate:${paginate}:${hook.path}`;
 
   if (!remove && parseNestedRoutes) {
-    path = parseNestedPath(path, hook.params);
+    path = `paginate:${paginate}:${parseNestedPath(path, hook.params)}`;
   }
 
   if (hook.id) {
