@@ -37,37 +37,53 @@ function routes(app) {
       }
 
       // Gets the value of a key in the redis client
-      client.get(`${target}`, (err, reply) => {
-        if (err) {
-          res.status(HTTP_SERVER_ERROR).json({
-            message: 'something went wrong' + err.message
-          });
-        } else {
-          // If the key existed
-          if (reply) {
-            // Clear existing cached key
-            h.clearSingle(target).then(r => {
-              res.status(HTTP_OK).json({
-                message: `cache cleared for key (${hasQueryString ?
-                  'with' : 'without'} params): ${target}`,
-                status: HTTP_OK
-              });
+      const clearSingleKey = (key) => new Promise((resolve) => {
+        client.get(key, (err, reply) => {
+          if (err) {
+            res.status(HTTP_SERVER_ERROR).json({
+              message: 'something went wrong' + err.message
             });
           } else {
-            /**
-             * Empty reply means the key does not exist.
-             * Must use HTTP_OK with express as HTTP's RFC stats 204 should not
-             * provide a body, message would then be lost.
-             */
-            res.status(HTTP_OK).json({
-              message: `cache already cleared for key (${hasQueryString ?
-                'with' : 'without'} params): ${target}`,
-              status: HTTP_NO_CONTENT
-            });
+            // If the key existed
+            if (reply) {
+              // Clear existing cached key
+              h.clearSingle(key)
+                .then(r => {
+                  resolve({
+                    message: `cache cleared for key (${hasQueryString ? 'with' : 'without'} params): ${key}`,
+                    status: HTTP_OK
+                  });
+                });
+            } else {
+              /**
+               * Empty reply means the key does not exist.
+               * Must use HTTP_OK with express as HTTP's RFC stats 204 should not
+               * provide a body, message would then be lost.
+               */
+              resolve({
+                message: `cache already cleared for key (${hasQueryString ? 'with' : 'without'} params): ${key}`,
+                status: HTTP_NO_CONTENT
+              });
+            }
           }
-
-        }
+        });
       });
+
+        Promise.all([
+          clearSingleKey(`paginate:on:${target}`),
+          clearSingleKey(`paginate:off:${target}`),
+        ])
+        .then(([withPagResult, witoutPagResult]) => {
+          if (withPagResult.status === HTTP_OK) {
+            res.status(HTTP_OK).json(withPagResult);
+          } else if (witoutPagResult.status === HTTP_OK) {
+            res.status(HTTP_OK).json(witoutPagResult);
+          } else if (withPagResult.status !== HTTP_OK) {
+            res.status(HTTP_OK).json(withPagResult);
+          } else {
+            res.status(HTTP_OK).json(witoutPagResult);
+          }
+        });
     } else {
       res.status(HTTP_NOT_FOUND).end();
     }
