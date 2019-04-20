@@ -15,7 +15,7 @@ function parseNestedPath(path, params) {
 
 function parsePath(hook, config = {removePathFromCacheKey: false, parseNestedRoutes: false}) {
   const q = hook.params.query || {};
-  const paginate = hook.params.paginate ? 'on' : 'off';
+  const paginate = hook.params.paginate === false ? 'off' : 'on';
   const remove = config.removePathFromCacheKey;
   const parseNestedRoutes = config.parseNestedRoutes;
   let path = remove && hook.id ? `paginate:${paginate}:` : `paginate:${paginate}:${hook.path}`;
